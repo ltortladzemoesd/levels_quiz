@@ -4,35 +4,47 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Levels Academy – English Level Placement Test</title>
-  <meta name="description" content="80-question English level placement test by Levels Academy. One question per card, 45-minute timer." />
+  <meta name="description" content="80-question English level placement test. One question per card, 45-minute timer." />
+  <!-- Red Hat Display -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
     :root{
-      --bg:#fff8e6;
+      --bg:#F2F2F2;
       --card:#ffffff;
       --accent:#2B445B;        /* dark blue */
-      --accent-2:#23B899;      /* green for buttons */
+      --accent-2:#23B899;      /* spare accent if needed */
       --text:#1f2a37;
       --muted:#6b7280;
-      --shadow:0 20px 40px rgba(0,0,0,.08);
       --radius:18px;
+      --navBtnWidth:140px;     /* keep Prev/Next same width */
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0;
-      font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      font-family:'Red Hat Display', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
       background:var(--bg);
       color:var(--text);
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
     }
-    #app{max-width:960px; margin:0 auto; padding:24px; display:flex; flex-direction:column; gap:24px}
-    .brand{display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.2px}
-    .brand .dot{width:28px;height:28px;border-radius:50%;background:#facc15;display:inline-block;position:relative;box-shadow:inset 0 0 0 6px #2B445B}
-    .card{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px; animation:fadeIn .35s ease both}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)}}
+    #app{
+      width:100%;
+      max-width:none;           /* full width on desktop */
+      margin:0 auto;
+      padding:20px 20px;        /* top 20, left/right 20 */
+      display:flex;
+      flex-direction:column;
+      gap:24px;
+    }
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:24px;
+      /* no shadows */
+    }
     .hidden{display:none !important}
     .row{display:flex; flex-wrap:wrap; gap:16px}
     .field{flex:1 1 260px; display:flex; flex-direction:column; gap:6px}
@@ -40,36 +52,67 @@
     .field input,.field select{
       appearance:none; -webkit-appearance:none;
       border:1px solid #e5e7eb; border-radius:12px; padding:12px 14px; font-size:16px; outline:none; background:white;
+      font-family:'Red Hat Display', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
     }
     .field input:focus,.field select:focus{border-color:var(--accent)}
+
     .btn{
-      border:0; background:var(--accent-2); color:white; padding:12px 18px; border-radius:999px; font-weight:700; cursor:pointer;
-      box-shadow:0 6px 16px rgba(35,184,153,.35); transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+      border:0;
+      background:var(--accent-2);
+      color:white;
+      padding:12px 18px;
+      border-radius:999px;
+      font-weight:800;                 /* Extra Bold for buttons */
+      font-family:'Red Hat Display', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      cursor:pointer;
+      transition:transform .12s ease, filter .12s ease, opacity .12s ease;
+      /* no button shadows */
     }
-    .btn.secondary{background:#2B445B; box-shadow:0 6px 16px rgba(43,68,91,.25)}
-    .btn.ghost{background:transparent; color:var(--accent); border:1px solid #cbd5e1}
+    .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); }
     .btn:disabled{opacity:.5; cursor:not-allowed}
+
+    .btn.secondary{ background:#2B445B; }              /* used for Next (overridden below) */
+    .btn.ghost{ background:transparent; color:var(--accent); border:1px solid #cbd5e1 }
+
     .actions{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
     .title{font-size:24px; font-weight:800; margin-bottom:8px}
     .subtitle{color:var(--muted); margin-bottom:18px}
+
     .timerStrip{display:flex; align-items:center; gap:10px; justify-content:space-between; margin-bottom:12px}
-    .badge{background:#f3f4f6; color:#111827; font-weight:700; padding:8px 12px; border-radius:12px; min-width:92px; text-align:center}
+    .badge{
+      background:#f3f4f6; color:#111827; font-weight:700; padding:8px 12px; border-radius:12px; min-width:92px; text-align:center
+    }
     .progress{height:10px; background:#f1f5f9; border-radius:999px; overflow:hidden}
     .progress > span{display:block; height:100%; width:0; background:linear-gradient(90deg,#2B445B,#23B899); transition:width .25s ease}
+
+    .pill{border-radius:999px; padding:6px 10px; background:#f3f4f6; display:inline-block; margin-bottom:12px} /* extra gap before question */
     .qtext{font-size:20px; font-weight:700; line-height:1.34; margin-bottom:14px}
+
     .opts{display:flex; flex-direction:column; gap:10px; margin:14px 0 4px}
-    .opt{padding:12px 14px; border:1px solid #e5e7eb; border-radius:14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform .08s ease, border-color .12s ease, background .12s ease}
+    .opt{
+      padding:12px 14px; border:1px solid #e5e7eb; border-radius:14px; display:flex; align-items:center; gap:12px; cursor:pointer;
+      transition:transform .08s ease, border-color .12s ease, background .12s ease;
+      background:white;
+    }
     .opt input{accent-color:#2B445B; margin:0}
     .opt:hover{transform:translateY(-1px); border-color:#cbd5e1; background:#fafafa}
+
     .foot{display:flex; justify-content:space-between; align-items:center; margin-top:16px}
     .muted{color:var(--muted); font-size:14px}
-    .pill{border-radius:999px; padding:6px 10px; background:#f3f4f6}
     .resultScore{font-size:42px; font-weight:800}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     .review{margin-top:16px; font-size:14px}
     details{background:#fafafa; border:1px solid #e5e7eb; padding:12px 14px; border-radius:12px}
     summary{cursor:pointer; font-weight:600}
-    @media (max-width:600px){#app{padding:14px}.title{font-size:20px}.qtext{font-size:18px}}
+
+    /* Nav button equal widths */
+    .navBtn{ width: var(--navBtnWidth); }
+
+    /* Specific button colors per your request */
+    #giveUpBtn{ background:#F66E6E; color:#fff; border:none }
+    #nextBtn{ background:#2B445B; color:#fff }
+    #prevBtn{ /* keep ghost look but same width */ }
+    @media (max-width:600px){ #app{padding:20px 14px} .title{font-size:20px} .qtext{font-size:18px} }
   </style>
 
   <!-- Load questions first -->
@@ -77,8 +120,6 @@
 </head>
 <body>
   <div id="app">
-    <div class="brand"><span class="dot" aria-hidden="true"></span> Levels Academy</div>
-
     <!-- Registration -->
     <section id="step-register" class="card">
       <div class="title">English Level Placement Test</div>
@@ -115,7 +156,7 @@
           <div class="progress" aria-label="Progress"><span id="progressBar"></span></div>
           <div class="muted" style="margin-top:8px"><span id="progressText">Question 1</span></div>
         </div>
-        <button class="btn ghost" id="giveUpBtn" type="button" title="End the test now and see your results">Give up</button>
+        <button class="btn" id="giveUpBtn" type="button" title="End the test now and see your results">Give up</button>
       </div>
 
       <div id="qCard">
@@ -123,10 +164,10 @@
         <div class="qtext" id="qText">Question text</div>
         <div class="opts" id="qOptions"></div>
         <div class="foot">
-          <button class="btn ghost" id="prevBtn" type="button">Previous</button>
+          <button class="btn ghost navBtn" id="prevBtn" type="button">Previous</button>
           <div class="actions">
             <span class="muted" id="saveHint"></span>
-            <button class="btn secondary" id="nextBtn" type="button">Next</button>
+            <button class="btn navBtn" id="nextBtn" type="button">Next</button>
             <button class="btn" id="submitBtn" type="button">Finish</button>
           </div>
         </div>
@@ -143,7 +184,6 @@
       <div class="subtitle" id="timeUsedText"></div>
 
       <div class="actions" style="margin:8px 0 2px">
-        <button id="downloadCsvBtn" class="btn">Download CSV</button>
         <button id="restartBtn" class="btn ghost">Restart</button>
       </div>
 
@@ -173,7 +213,6 @@
     const $ = (sel) => document.querySelector(sel);
     const fmt = (n) => String(n).padStart(2,'0');
 
-    // QUESTIONS comes from questions.js (loaded in <head>)
     let QUESTIONS = window.QUESTIONS || [];
 
     const state = {
@@ -201,7 +240,7 @@
           $('#step-register').classList.add('hidden');
           $('#step-quiz').classList.remove('hidden');
           renderQuestion();
-          startTimer(true);
+          startTimer();
         }
       }catch(e){ console.warn('load failed', e); }
     }
@@ -219,7 +258,7 @@
       $('#step-register').classList.add('hidden');
       $('#step-quiz').classList.remove('hidden');
       renderQuestion();
-      startTimer(false);
+      startTimer();
     });
 
     /* ------------ Quiz -------------- */
@@ -256,19 +295,19 @@
       if(chosen){ state.answers[q.id] = chosen.value; save(); }
     }
 
-    $('#nextBtn').addEventListener('click', ()=>{
+    document.getElementById('nextBtn').addEventListener('click', ()=>{
       captureAnswer();
       if(state.index < QUESTIONS.length-1){ state.index++; save(); renderQuestion(); }
     });
-    $('#prevBtn').addEventListener('click', ()=>{
+    document.getElementById('prevBtn').addEventListener('click', ()=>{
       captureAnswer();
       if(state.index > 0){ state.index--; save(); renderQuestion(); }
     });
-    $('#submitBtn').addEventListener('click', ()=>{
+    document.getElementById('submitBtn').addEventListener('click', ()=>{
       captureAnswer();
       finish(false);
     });
-    $('#giveUpBtn').addEventListener('click', ()=>{
+    document.getElementById('giveUpBtn').addEventListener('click', ()=>{
       if(confirm('Are you sure you want to end the test now?')){
         captureAnswer(); state.giveUp = true; finish(false);
       }
@@ -307,7 +346,7 @@
         review.push({id:q.id, text:q.text, picked, correctAns:q.correct, ok});
       }
       const elapsedSec = Math.floor((Date.now() - state.startedAt)/1000);
-      const scaled80 = Math.round(correct * 80 / Math.max(1,total));  // safe while testing
+      const scaled80 = Math.round(correct * 80 / Math.max(1,total));
       const level = levelFromScore(scaled80);
 
       $('#step-quiz').classList.add('hidden');
@@ -328,27 +367,6 @@
                          <div>Correct: <strong>${r.correctAns}</strong> ${r.ok? '✅':'❌'}</div>`;
         list.appendChild(div);
       });
-
-      // CSV download (meta + per-question answers)
-      const csvHeaders = [
-        'timestamp','firstName','lastName','dob','phone','email','plan',
-        'giveUp','elapsedSec','rawScore','rawTotal','scaledTo80','level'
-      ];
-      const meta = state.user || {};
-      const row = [
-        new Date().toISOString(), meta.firstName||'', meta.lastName||'', meta.dob||'', meta.phone||'', meta.email||'', meta.plan||'',
-        state.giveUp, elapsedSec, correct, total, scaled80, level
-      ];
-      QUESTIONS.forEach((q, i)=>{
-        csvHeaders.push(`Q${i+1}_picked`); row.push(state.answers[q.id] ?? '');
-        csvHeaders.push(`Q${i+1}_correct`); row.push(q.correct ?? '');
-      });
-      const csv = [csvHeaders.join(','), row.map(v=>String(v).replace(/"/g,'""')).map(v=>`"${v}"`).join(',')].join('\n');
-      const blob = new Blob([csv], {type:'text/csv'});
-      const url = URL.createObjectURL(blob);
-      document.getElementById('downloadCsvBtn').onclick = ()=>{
-        const a = document.createElement('a'); a.href = url; a.download = 'levels_placement_result.csv'; a.click();
-      };
 
       localStorage.removeItem(STORAGE_KEY);
     }
