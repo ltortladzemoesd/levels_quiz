@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Levels Academy – English Level Placement Test</title>
+  <meta name="description" content="80-question English level placement test by Levels Academy. One question per card, 45-minute timer." />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#fff8e6;
+      --card:#ffffff;
+      --accent:#2B445B;        /* dark blue */
+      --accent-2:#23B899;      /* green for buttons */
+      --text:#1f2a37;
+      --muted:#6b7280;
+      --shadow:0 20px 40px rgba(0,0,0,.08);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    #app{max-width:960px; margin:0 auto; padding:24px; display:flex; flex-direction:column; gap:24px}
+    .brand{display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.2px}
+    .brand .dot{width:28px;height:28px;border-radius:50%;background:#facc15;display:inline-block;position:relative;box-shadow:inset 0 0 0 6px #2B445B}
+    .card{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px; animation:fadeIn .35s ease both}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)}}
+    .hidden{display:none !important}
+    .row{display:flex; flex-wrap:wrap; gap:16px}
+    .field{flex:1 1 260px; display:flex; flex-direction:column; gap:6px}
+    .field label{font-size:14px; color:var(--muted)}
+    .field input,.field select{
+      appearance:none; -webkit-appearance:none;
+      border:1px solid #e5e7eb; border-radius:12px; padding:12px 14px; font-size:16px; outline:none; background:white;
+    }
+    .field input:focus,.field select:focus{border-color:var(--accent)}
+    .btn{
+      border:0; background:var(--accent-2); color:white; padding:12px 18px; border-radius:999px; font-weight:700; cursor:pointer;
+      box-shadow:0 6px 16px rgba(35,184,153,.35); transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+    .btn.secondary{background:#2B445B; box-shadow:0 6px 16px rgba(43,68,91,.25)}
+    .btn.ghost{background:transparent; color:var(--accent); border:1px solid #cbd5e1}
+    .btn:disabled{opacity:.5; cursor:not-allowed}
+    .actions{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .title{font-size:24px; font-weight:800; margin-bottom:8px}
+    .subtitle{color:var(--muted); margin-bottom:18px}
+    .timerStrip{display:flex; align-items:center; gap:10px; justify-content:space-between; margin-bottom:12px}
+    .badge{background:#f3f4f6; color:#111827; font-weight:700; padding:8px 12px; border-radius:12px; min-width:92px; text-align:center}
+    .progress{height:10px; background:#f1f5f9; border-radius:999px; overflow:hidden}
+    .progress > span{display:block; height:100%; width:0; background:linear-gradient(90deg,#2B445B,#23B899); transition:width .25s ease}
+    .qtext{font-size:20px; font-weight:700; line-height:1.34; margin-bottom:14px}
+    .opts{display:flex; flex-direction:column; gap:10px; margin:14px 0 4px}
+    .opt{padding:12px 14px; border:1px solid #e5e7eb; border-radius:14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:transform .08s ease, border-color .12s ease, background .12s ease}
+    .opt input{accent-color:#2B445B; margin:0}
+    .opt:hover{transform:translateY(-1px); border-color:#cbd5e1; background:#fafafa}
+    .foot{display:flex; justify-content:space-between; align-items:center; margin-top:16px}
+    .muted{color:var(--muted); font-size:14px}
+    .pill{border-radius:999px; padding:6px 10px; background:#f3f4f6}
+    .resultScore{font-size:42px; font-weight:800}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    .review{margin-top:16px; font-size:14px}
+    details{background:#fafafa; border:1px solid #e5e7eb; padding:12px 14px; border-radius:12px}
+    summary{cursor:pointer; font-weight:600}
+    @media (max-width:600px){#app{padding:14px}.title{font-size:20px}.qtext{font-size:18px}}
+  </style>
+
+  <!-- Load questions first -->
+  <script src="questions.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="brand"><span class="dot" aria-hidden="true"></span> Levels Academy</div>
+
+    <!-- Registration -->
+    <section id="step-register" class="card">
+      <div class="title">English Level Placement Test</div>
+      <div class="subtitle">Please complete the form to begin. You will have <strong>45 minutes</strong>.</div>
+      <form id="regForm" autocomplete="on">
+        <div class="row">
+          <div class="field"><label for="firstName">First name</label><input id="firstName" name="firstName" required placeholder="Name" /></div>
+          <div class="field"><label for="lastName">Last name</label><input id="lastName" name="lastName" required placeholder="Surname" /></div>
+          <div class="field"><label for="dob">Date of Birth</label><input id="dob" name="dob" type="date" required /></div>
+          <div class="field"><label for="phone">Phone number</label><input id="phone" name="phone" type="tel" inputmode="tel" placeholder="+995 5XX XX XX XX" required /></div>
+          <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" placeholder="name@example.com" required /></div>
+          <div class="field">
+            <label for="plan">Are you planning on taking an English Language Course at Levels Academy?</label>
+            <select id="plan" name="plan" required>
+              <option value="" disabled selected>Select...</option>
+              <option>Yes</option>
+              <option>No</option>
+              <option>Not sure yet</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:14px">
+          <button class="btn" id="startBtn" type="submit">Start the test</button>
+          <span class="muted">One question at a time.</span>
+        </div>
+      </form>
+    </section>
+
+    <!-- Quiz -->
+    <section id="step-quiz" class="card hidden" aria-live="polite">
+      <div class="timerStrip">
+        <div class="badge mono" id="timeLeft">45:00</div>
+        <div style="flex:1; margin:0 12px">
+          <div class="progress" aria-label="Progress"><span id="progressBar"></span></div>
+          <div class="muted" style="margin-top:8px"><span id="progressText">Question 1</span></div>
+        </div>
+        <button class="btn ghost" id="giveUpBtn" type="button" title="End the test now and see your results">Give up</button>
+      </div>
+
+      <div id="qCard">
+        <div class="pill mono" id="qTag">Q1</div>
+        <div class="qtext" id="qText">Question text</div>
+        <div class="opts" id="qOptions"></div>
+        <div class="foot">
+          <button class="btn ghost" id="prevBtn" type="button">Previous</button>
+          <div class="actions">
+            <span class="muted" id="saveHint"></span>
+            <button class="btn secondary" id="nextBtn" type="button">Next</button>
+            <button class="btn" id="submitBtn" type="button">Finish</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="step-result" class="card hidden">
+      <div class="title">Your Result</div>
+      <div class="row" style="align-items:center">
+        <div class="resultScore"><span id="scoreText">0</span> / <span id="totalText">80</span></div>
+        <div style="padding:10px 16px; border-radius:12px; background:#f3f4f6; font-weight:800; font-size:28px; margin-left:12px" id="levelText">A1</div>
+      </div>
+      <div class="subtitle" id="timeUsedText"></div>
+
+      <div class="actions" style="margin:8px 0 2px">
+        <button id="downloadCsvBtn" class="btn">Download CSV</button>
+        <button id="restartBtn" class="btn ghost">Restart</button>
+      </div>
+
+      <div class="review">
+        <details>
+          <summary>Review your answers</summary>
+          <div id="reviewList" style="margin-top:10px"></div>
+        </details>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /* ------------ CONFIG ------------- */
+    const TEST_MINUTES = 45;                    // countdown length
+    const STORAGE_KEY = 'levelsQuiz.v1';
+
+    // CEFR cuts fixed to your visual (0–9 A1, 10–27 A2, 28–36 B1, 37–60 B2, 61–80 C1)
+    function levelFromScore(score80){
+      if(score80 <= 9) return 'A1';
+      if(score80 <= 27) return 'A2';
+      if(score80 <= 36) return 'B1';
+      if(score80 <= 60) return 'B2';
+      return 'C1';
+    }
+
+    const $ = (sel) => document.querySelector(sel);
+    const fmt = (n) => String(n).padStart(2,'0');
+
+    // QUESTIONS comes from questions.js (loaded in <head>)
+    let QUESTIONS = window.QUESTIONS || [];
+
+    const state = {
+      user: null,
+      index: 0,
+      answers: {},        // qid -> option string
+      startedAt: null,    // unix ms
+      giveUp: false,
+    };
+
+    function save(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      $('#saveHint').textContent = 'Saved';
+      setTimeout(()=>$('#saveHint').textContent='', 900);
+    }
+    function load(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return;
+        const s = JSON.parse(raw);
+        if(s && s.user && s.startedAt){
+          Object.assign(state, s);
+          const elapsed = Date.now() - s.startedAt;
+          if(elapsed > TEST_MINUTES*60*1000){ localStorage.removeItem(STORAGE_KEY); return; }
+          $('#step-register').classList.add('hidden');
+          $('#step-quiz').classList.remove('hidden');
+          renderQuestion();
+          startTimer(true);
+        }
+      }catch(e){ console.warn('load failed', e); }
+    }
+
+    /* -------- Registration ---------- */
+    $('#regForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+      state.user = data;
+      state.index = 0;
+      state.answers = {};
+      state.startedAt = Date.now();
+      state.giveUp = false;
+      save();
+      $('#step-register').classList.add('hidden');
+      $('#step-quiz').classList.remove('hidden');
+      renderQuestion();
+      startTimer(false);
+    });
+
+    /* ------------ Quiz -------------- */
+    function renderQuestion(){
+      const i = state.index;
+      const total = QUESTIONS.length;
+      const q = QUESTIONS[i];
+      $('#qTag').textContent = `Q${i+1}`;
+      $('#qText').textContent = q.text;
+      $('#progressText').textContent = `Question ${i+1} of ${total}`;
+      $('#progressBar').style.width = ((i)/Math.max(1,total) * 100)+'%';
+      const container = $('#qOptions');
+      container.innerHTML = '';
+      const prevValue = state.answers[q.id];
+      q.options.forEach((opt, idx)=>{
+        const id = `q${q.id}_${idx}`;
+        const div = document.createElement('label');
+        div.className = 'opt';
+        div.innerHTML = `<input type="radio" name="opt" id="${id}" value="${opt}"> <span>${opt}</span>`;
+        container.appendChild(div);
+      });
+      if(prevValue){
+        const input = [...container.querySelectorAll('input')].find(i=>i.value===prevValue);
+        if(input){ input.checked = true; }
+      }
+      $('#prevBtn').disabled = (i===0);
+      $('#nextBtn').classList.toggle('hidden', i===total-1);
+      $('#submitBtn').classList.toggle('hidden', i!==total-1);
+    }
+
+    function captureAnswer(){
+      const q = QUESTIONS[state.index];
+      const chosen = document.querySelector('input[name="opt"]:checked');
+      if(chosen){ state.answers[q.id] = chosen.value; save(); }
+    }
+
+    $('#nextBtn').addEventListener('click', ()=>{
+      captureAnswer();
+      if(state.index < QUESTIONS.length-1){ state.index++; save(); renderQuestion(); }
+    });
+    $('#prevBtn').addEventListener('click', ()=>{
+      captureAnswer();
+      if(state.index > 0){ state.index--; save(); renderQuestion(); }
+    });
+    $('#submitBtn').addEventListener('click', ()=>{
+      captureAnswer();
+      finish(false);
+    });
+    $('#giveUpBtn').addEventListener('click', ()=>{
+      if(confirm('Are you sure you want to end the test now?')){
+        captureAnswer(); state.giveUp = true; finish(false);
+      }
+    });
+
+    /* ------------ Timer ------------- */
+    let tickHandle = null;
+    function startTimer(){
+      const endAt = state.startedAt + TEST_MINUTES*60*1000;
+      function tick(){
+        const msLeft = Math.max(0, endAt - Date.now());
+        const sec = Math.floor(msLeft/1000);
+        const mm = Math.floor(sec/60);
+        const ss = sec % 60;
+        $('#timeLeft').textContent = `${fmt(mm)}:${fmt(ss)}`;
+        if(sec <= 0){
+          finish(true);
+        }else{
+          tickHandle = setTimeout(tick, 250);
+        }
+      }
+      if(tickHandle) clearTimeout(tickHandle);
+      tick();
+    }
+
+    /* ------------ Finish ------------ */
+    function finish(timeUp){
+      if(tickHandle) clearTimeout(tickHandle);
+      const total = QUESTIONS.length;
+      let correct = 0;
+      const review = [];
+      for(const q of QUESTIONS){
+        const picked = state.answers[q.id];
+        const ok = (picked||'').trim().toLowerCase() === (q.correct||'').trim().toLowerCase();
+        if(ok) correct++;
+        review.push({id:q.id, text:q.text, picked, correctAns:q.correct, ok});
+      }
+      const elapsedSec = Math.floor((Date.now() - state.startedAt)/1000);
+      const scaled80 = Math.round(correct * 80 / Math.max(1,total));  // safe while testing
+      const level = levelFromScore(scaled80);
+
+      $('#step-quiz').classList.add('hidden');
+      $('#step-result').classList.remove('hidden');
+      $('#scoreText').textContent = `${correct}`;
+      $('#totalText').textContent = `${total}`;
+      $('#levelText').textContent = level;
+      const mm = Math.floor(elapsedSec/60), ss = elapsedSec%60;
+      $('#timeUsedText').textContent = `Time used: ${fmt(mm)}:${fmt(ss)}  ·  Scaled score for level: ${scaled80}/80` + (state.giveUp? '  ·  (Gave up early)':'');
+
+      const list = document.getElementById('reviewList');
+      list.innerHTML = '';
+      review.forEach((r,idx)=>{
+        const div = document.createElement('div');
+        div.style.margin = '8px 0';
+        div.innerHTML = `<div><strong>Q${idx+1}. ${r.text}</strong></div>
+                         <div>Your answer: <span class="${r.ok?'':'mono'}">${r.picked ?? '(no answer)'}</span></div>
+                         <div>Correct: <strong>${r.correctAns}</strong> ${r.ok? '✅':'❌'}</div>`;
+        list.appendChild(div);
+      });
+
+      // CSV download (meta + per-question answers)
+      const csvHeaders = [
+        'timestamp','firstName','lastName','dob','phone','email','plan',
+        'giveUp','elapsedSec','rawScore','rawTotal','scaledTo80','level'
+      ];
+      const meta = state.user || {};
+      const row = [
+        new Date().toISOString(), meta.firstName||'', meta.lastName||'', meta.dob||'', meta.phone||'', meta.email||'', meta.plan||'',
+        state.giveUp, elapsedSec, correct, total, scaled80, level
+      ];
+      QUESTIONS.forEach((q, i)=>{
+        csvHeaders.push(`Q${i+1}_picked`); row.push(state.answers[q.id] ?? '');
+        csvHeaders.push(`Q${i+1}_correct`); row.push(q.correct ?? '');
+      });
+      const csv = [csvHeaders.join(','), row.map(v=>String(v).replace(/"/g,'""')).map(v=>`"${v}"`).join(',')].join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      document.getElementById('downloadCsvBtn').onclick = ()=>{
+        const a = document.createElement('a'); a.href = url; a.download = 'levels_placement_result.csv'; a.click();
+      };
+
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
+    document.getElementById('restartBtn').addEventListener('click', ()=>{
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    });
+
+    // Try to resume if user refreshes mid-test
+    load();
+  </script>
+</body>
+</html>
