@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Levels Academy – English Level Placement Test</title>
+  <title>English Level Placement Test</title>
   <meta name="description" content="80-question English level placement test. One question per card, 45-minute timer." />
   <!-- Red Hat Display -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,12 +13,14 @@
     :root{
       --bg:#F2F2F2;
       --card:#ffffff;
-      --accent:#2B445B;        /* dark blue */
-      --accent-2:#23B899;      /* spare accent if needed */
+      --accent:#2B445B;
       --text:#1f2a37;
       --muted:#6b7280;
       --radius:18px;
-      --navBtnWidth:140px;     /* keep Prev/Next same width */
+      --navBtnWidth:140px;        /* equal width for Prev/Next */
+      --badgeW: 92px;             /* timer & Q1 pill same width */
+      --hoverBg:#ADE2D7;          /* requested hover background */
+      --hoverText:#2B445B;        /* requested hover text color */
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -32,9 +34,9 @@
     }
     #app{
       width:100%;
-      max-width:none;           /* full width on desktop */
+      max-width:none;              /* full width on desktop */
       margin:0 auto;
-      padding:20px 20px;        /* top 20, left/right 20 */
+      padding:20px 20px;           /* top 20, left/right 20 */
       display:flex;
       flex-direction:column;
       gap:24px;
@@ -43,7 +45,7 @@
       background:var(--card);
       border-radius:var(--radius);
       padding:24px;
-      /* no shadows */
+      /* no shadows anywhere */
     }
     .hidden{display:none !important}
     .row{display:flex; flex-wrap:wrap; gap:16px}
@@ -56,38 +58,57 @@
     }
     .field input:focus,.field select:focus{border-color:var(--accent)}
 
+    /* Buttons */
     .btn{
       border:0;
-      background:var(--accent-2);
+      background:#23B899;          /* default (used by Start & Finish if not overridden) */
       color:white;
       padding:12px 18px;
       border-radius:999px;
-      font-weight:800;                 /* Extra Bold for buttons */
+      font-weight:800;             /* Extra Bold for buttons */
       font-family:'Red Hat Display', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
       cursor:pointer;
-      transition:transform .12s ease, filter .12s ease, opacity .12s ease;
-      /* no button shadows */
+      transition:transform .12s ease, filter .12s ease, opacity .12s ease, background-color .12s ease, color .12s ease, border-color .12s ease;
     }
-    .btn:hover{ transform: translateY(-1px); filter: brightness(1.03); }
+    .btn:hover{ transform: translateY(-1px); }
     .btn:disabled{opacity:.5; cursor:not-allowed}
 
-    .btn.secondary{ background:#2B445B; }              /* used for Next (overridden below) */
     .btn.ghost{ background:transparent; color:var(--accent); border:1px solid #cbd5e1 }
 
-    .actions{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
-    .title{font-size:24px; font-weight:800; margin-bottom:8px}
-    .subtitle{color:var(--muted); margin-bottom:18px}
+    /* Specific button colors per your request */
+    .navBtn{ width: var(--navBtnWidth); }
+    #nextBtn{ background:#2B445B; color:#fff }
+    #nextBtn:hover{ background:var(--hoverBg); color:var(--hoverText) }
 
+    #prevBtn{ /* ghost by default */ }
+    #prevBtn:hover{ background:var(--hoverBg); color:var(--hoverText); border-color:var(--hoverBg) }
+
+    #giveUpBtn{ background:#F66E6E; color:#fff; border:none }
+    #giveUpBtn:hover{ opacity:.7; color:var(--hoverText) }
+
+    /* Timer + progress */
     .timerStrip{display:flex; align-items:center; gap:10px; justify-content:space-between; margin-bottom:12px}
     .badge{
-      background:#f3f4f6; color:#111827; font-weight:700; padding:8px 12px; border-radius:12px; min-width:92px; text-align:center
+      width:var(--badgeW);
+      background:#f3f4f6; color:#111827; font-weight:700; padding:8px 12px; border-radius:12px; text-align:center
     }
     .progress{height:10px; background:#f1f5f9; border-radius:999px; overflow:hidden}
     .progress > span{display:block; height:100%; width:0; background:linear-gradient(90deg,#2B445B,#23B899); transition:width .25s ease}
+    .muted{color:var(--muted); font-size:14px}
 
-    .pill{border-radius:999px; padding:6px 10px; background:#f3f4f6; display:inline-block; margin-bottom:12px} /* extra gap before question */
+    /* Q# pill + question */
+    .pill{
+      width:var(--badgeW);
+      border-radius:999px;
+      padding:6px 10px;
+      background:#f3f4f6;
+      display:inline-block;
+      text-align:center;
+      margin-bottom:16px;          /* extra gap before question */
+    }
     .qtext{font-size:20px; font-weight:700; line-height:1.34; margin-bottom:14px}
 
+    /* Options */
     .opts{display:flex; flex-direction:column; gap:10px; margin:14px 0 4px}
     .opt{
       padding:12px 14px; border:1px solid #e5e7eb; border-radius:14px; display:flex; align-items:center; gap:12px; cursor:pointer;
@@ -96,22 +117,16 @@
     }
     .opt input{accent-color:#2B445B; margin:0}
     .opt:hover{transform:translateY(-1px); border-color:#cbd5e1; background:#fafafa}
+    .opt.selected{ background:var(--hoverBg); border-color:var(--hoverBg) } /* selected option pill */
 
     .foot{display:flex; justify-content:space-between; align-items:center; margin-top:16px}
-    .muted{color:var(--muted); font-size:14px}
+
     .resultScore{font-size:42px; font-weight:800}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     .review{margin-top:16px; font-size:14px}
     details{background:#fafafa; border:1px solid #e5e7eb; padding:12px 14px; border-radius:12px}
     summary{cursor:pointer; font-weight:600}
 
-    /* Nav button equal widths */
-    .navBtn{ width: var(--navBtnWidth); }
-
-    /* Specific button colors per your request */
-    #giveUpBtn{ background:#F66E6E; color:#fff; border:none }
-    #nextBtn{ background:#2B445B; color:#fff }
-    #prevBtn{ /* keep ghost look but same width */ }
     @media (max-width:600px){ #app{padding:20px 14px} .title{font-size:20px} .qtext{font-size:18px} }
   </style>
 
@@ -198,10 +213,9 @@
 
   <script>
     /* ------------ CONFIG ------------- */
-    const TEST_MINUTES = 45;                    // countdown length
+    const TEST_MINUTES = 45;
     const STORAGE_KEY = 'levelsQuiz.v1';
 
-    // CEFR cuts fixed to your visual (0–9 A1, 10–27 A2, 28–36 B1, 37–60 B2, 61–80 C1)
     function levelFromScore(score80){
       if(score80 <= 9) return 'A1';
       if(score80 <= 27) return 'A2';
@@ -215,13 +229,7 @@
 
     let QUESTIONS = window.QUESTIONS || [];
 
-    const state = {
-      user: null,
-      index: 0,
-      answers: {},        // qid -> option string
-      startedAt: null,    // unix ms
-      giveUp: false,
-    };
+    const state = { user:null, index:0, answers:{}, startedAt:null, giveUp:false };
 
     function save(){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -262,6 +270,13 @@
     });
 
     /* ------------ Quiz -------------- */
+    function updateOptionSelectionUI(){
+      const container = $('#qOptions');
+      container.querySelectorAll('.opt').forEach(l=>l.classList.remove('selected'));
+      const checked = container.querySelector('input[name="opt"]:checked');
+      if(checked){ checked.closest('.opt').classList.add('selected'); }
+    }
+
     function renderQuestion(){
       const i = state.index;
       const total = QUESTIONS.length;
@@ -270,6 +285,7 @@
       $('#qText').textContent = q.text;
       $('#progressText').textContent = `Question ${i+1} of ${total}`;
       $('#progressBar').style.width = ((i)/Math.max(1,total) * 100)+'%';
+
       const container = $('#qOptions');
       container.innerHTML = '';
       const prevValue = state.answers[q.id];
@@ -280,10 +296,17 @@
         div.innerHTML = `<input type="radio" name="opt" id="${id}" value="${opt}"> <span>${opt}</span>`;
         container.appendChild(div);
       });
+
+      // one handler per render to reflect selection
+      container.onchange = updateOptionSelectionUI;
+
+      // restore selection
       if(prevValue){
         const input = [...container.querySelectorAll('input')].find(i=>i.value===prevValue);
         if(input){ input.checked = true; }
       }
+      updateOptionSelectionUI();
+
       $('#prevBtn').disabled = (i===0);
       $('#nextBtn').classList.toggle('hidden', i===total-1);
       $('#submitBtn').classList.toggle('hidden', i!==total-1);
@@ -376,7 +399,7 @@
       location.reload();
     });
 
-    // Try to resume if user refreshes mid-test
+    // Resume if user refreshes mid-test
     load();
   </script>
 </body>
