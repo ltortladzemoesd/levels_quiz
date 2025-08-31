@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Levels – Quiz Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F2F2; --card:#fff; --text:#1f2a37; --muted:#6b7280; --accent:#2B445B; --ok:#23B899;
+    --hoverBg:#ADE2D7; --hoverText:#2B445B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Red Hat Display",system-ui,Arial}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px}
+  h1{margin:0 0 12px;font-weight:800}
+  .card{background:var(--card);border-radius:16px;padding:16px}
+  .row{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+  input,select{padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;font:inherit;background:white}
+  .btn{background:#2B445B;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:800;cursor:pointer;transition:transform .12s,background .12s,color .12s}
+  .btn:hover{transform:translateY(-1px);background:var(--hoverBg);color:var(--hoverText)}
+  .toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:10px;border-bottom:1px solid #f0f0f0;text-align:left;font-size:14px}
+  th{font-weight:800}
+  .badge{display:inline-block;background:#f3f4f6;border-radius:10px;padding:4px 8px;font-size:12px}
+  .stat{padding:10px 12px;border:1px solid #eee;border-radius:12px;background:#fff}
+  .muted{color:var(--muted)}
+  .login{display:flex;gap:10px;align-items:flex-end}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Quiz Admin</h1>
+
+    <div id="loginCard" class="card">
+      <div class="login">
+        <div>
+          <label>Results API URL</label>
+          <input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec" style="min-width:420px">
+        </div>
+        <div>
+          <label>Admin token</label>
+          <input id="apiToken" placeholder="YOUR_SECRET_TOKEN">
+        </div>
+        <button class="btn" id="saveConn">Save & Load</button>
+        <span class="muted">These values are stored only in your browser (localStorage).</span>
+      </div>
+    </div>
+
+    <div id="app" class="card" style="margin-top:12px;display:none">
+      <div class="toolbar">
+        <div>
+          <label>Search name/email</label>
+          <input id="q" placeholder="type to filter…" />
+        </div>
+        <div>
+          <label>Level</label>
+          <select id="level">
+            <option value="">All</option>
+            <option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option>
+          </select>
+        </div>
+        <div>
+          <label>From date</label>
+          <input id="from" type="date" />
+        </div>
+        <div>
+          <label>To date</label>
+          <input id="to" type="date" />
+        </div>
+        <button class="btn" id="refresh">Refresh</button>
+        <button class="btn" id="export">Export CSV</button>
+      </div>
+
+      <div class="row">
+        <div class="stat"><strong id="count">0</strong> attempts</div>
+        <div class="stat">Avg score: <strong id="avg">-</strong></div>
+        <div class="stat">Levels: <span id="dist" class="muted"></span></div>
+      </div>
+
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>Time</th><th>Name</th><th>Email</th><th>Phone</th>
+            <th>Level</th><th>Score</th><th>Duration</th><th>Gave up</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="muted">Tip: click “Export CSV” to save the filtered view.</div>
+    </div>
+  </div>
+
+<script>
+  const $ = s => document.querySelector(s);
+  const LS = {
+    url: 'levels.results.url',
+    tok: 'levels.results.token'
+  };
+
+  $('#apiUrl').value = localStorage.getItem(LS.url) || '';
+  $('#apiToken').value = localStorage.getItem(LS.tok) || '';
+
+  $('#saveConn').onclick = () => {
+    localStorage.setItem(LS.url, $('#apiUrl').value.trim());
+    localStorage.setItem(LS.tok, $('#apiToken').value.trim());
+    load();
+  };
+  $('#refresh').onclick = () => load();
+  $('#q').oninput = () => render(window._rows||[]);
+  $('#level').onchange = () => render(window._rows||[]);
+  $('#from').onchange = () => render(window._rows||[]);
+  $('#to').onchange = () => render(window._rows||[]);
+  $('#export').onclick = exportCSV;
+
+  async function load(){
+    const url = localStorage.getItem(LS.url);
+    const token = localStorage.getItem(LS.tok);
+    if(!url || !token){ alert('Set API URL and token first.'); return; }
+    $('#app').style.display = 'block';
+    try{
+      const res = await fetch(url + '?token=' + encodeURIComponent(token));
+      const json = await res.json();
+      if(!json.ok){ throw new Error(json.error || 'API error'); }
+      // Normalize timestamps for display
+      window._rows = (json.rows||[]).map(r=>{
+        return Object.assign({}, r, {
+          timestamp: r.timestamp ? new Date(r.timestamp).toISOString() : ''
+        });
+      });
+      render(window._rows);
+    }catch(e){
+      alert('Failed to load: ' + e.message);
+    }
+  }
+
+  function render(rows){
+    const q = $('#q').value.trim().toLowerCase();
+    const lvl = $('#level').value;
+    const from = $('#from').value ? new Date($('#from').value) : null;
+    const to = $('#to').value ? new Date($('#to').value) : null;
+
+    const filtered = rows.filter(r=>{
+      const when = r.timestamp ? new Date(r.timestamp) : null;
+      const matchQ = !q || ( (r.firstName||'').toLowerCase().includes(q) || (r.lastName||'').toLowerCase().includes(q) || (r.email||'').toLowerCase().includes(q) );
+      const matchL = !lvl || (r.level===lvl);
+      const matchFrom = !from || (when && when >= from);
+      const matchTo = !to || (when && when <= new Date(to.getTime()+24*3600*1000-1));
+      return matchQ && matchL && matchFrom && matchTo;
+    });
+
+    // stats
+    $('#count').textContent = filtered.length;
+    const scores = filtered.map(r=>Number(r.rawScore||0)).filter(n=>!isNaN(n));
+    $('#avg').textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '-';
+    const levels = ['A1','A2','B1','B2','C1'];
+    $('#dist').textContent = levels.map(L=>{
+      const c = filtered.filter(r=>r.level===L).length;
+      return `${L}:${c}`;
+    }).join('  ');
+
+    // table
+    const tbody = $('#tbl tbody'); tbody.innerHTML='';
+    filtered
+      .sort((a,b)=> (new Date(b.timestamp)) - (new Date(a.timestamp)))
+      .forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.timestamp?.replace('T',' ').replace('Z','') || ''}</td>
+          <td>${(r.firstName||'') + ' ' + (r.lastName||'')}</td>
+          <td>${r.email||''}</td>
+          <td>${r.phone||''}</td>
+          <td><span class="badge">${r.level||''}</span></td>
+          <td>${r.rawScore||0}/${r.rawTotal||0} (=${r.scaledTo80||0}/80)</td>
+          <td>${fmtMin(r.elapsedSec)}</td>
+          <td>${String(r.giveUp).toUpperCase()==='TRUE' || r.giveUp===true ? 'Yes' : 'No'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+  }
+
+  function exportCSV(){
+    const rows = [...document.querySelectorAll('#tbl tbody tr')].map(tr => [...tr.children].map(td => td.textContent));
+    const header = ['Time','Name','Email','Phone','Level','Score','Duration','Gave up'];
+    const csv = [header, ...rows].map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'quiz_results.csv';
+    a.click();
+  }
+
+  function fmtMin(sec){
+    sec = Number(sec||0);
+    const m = Math.floor(sec/60), s = sec%60;
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+
+  // Auto-load if saved
+  if(localStorage.getItem(LS.url) && localStorage.getItem(LS.tok)){
+    load();
+  }
+</script>
+</body>
+</html>
