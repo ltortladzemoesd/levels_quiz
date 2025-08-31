@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title></title>
+  <title>English Level Placement Test</title>
   <meta name="description" content="One question per card, 45-minute timer." />
   <!-- Red Hat Display -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -61,28 +61,25 @@
     /* Buttons */
     .btn{
       border:0;
-      background:#23B899;          /* default (used by Start & Finish if not overridden) */
+      background:#23B899;          /* default (Start/Finish if not overridden) */
       color:white;
       padding:12px 18px;
       border-radius:999px;
-      font-weight:800;             /* Extra Bold for buttons */
+      font-weight:800;             /* Extra Bold */
       font-family:'Red Hat Display', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
       cursor:pointer;
       transition:transform .12s ease, filter .12s ease, opacity .12s ease, background-color .12s ease, color .12s ease, border-color .12s ease;
     }
     .btn:hover{ transform: translateY(-1px); }
     .btn:disabled{opacity:.5; cursor:not-allowed}
-
     .btn.ghost{ background:transparent; color:var(--accent); border:1px solid #cbd5e1 }
 
     /* Specific button colors per your request */
     .navBtn{ width: var(--navBtnWidth); }
     #nextBtn{ background:#2B445B; color:#fff }
     #nextBtn:hover{ background:var(--hoverBg); color:var(--hoverText) }
-
     #prevBtn{ /* ghost by default */ }
     #prevBtn:hover{ background:var(--hoverBg); color:var(--hoverText); border-color:var(--hoverBg) }
-
     #giveUpBtn{ background:#F66E6E; color:#fff; border:none }
     #giveUpBtn:hover{ opacity:.7; color:var(--hoverText) }
 
@@ -104,7 +101,7 @@
       background:#f3f4f6;
       display:inline-block;
       text-align:center;
-      margin-bottom:16px;          /* extra gap before question */
+      margin-bottom:16px;          /* gap before question */
     }
     .qtext{font-size:20px; font-weight:700; line-height:1.34; margin-bottom:14px}
 
@@ -123,9 +120,6 @@
 
     .resultScore{font-size:42px; font-weight:800}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .review{margin-top:16px; font-size:14px}
-    details{background:#fafafa; border:1px solid #e5e7eb; padding:12px 14px; border-radius:12px}
-    summary{cursor:pointer; font-weight:600}
 
     @media (max-width:600px){ #app{padding:20px 14px} .title{font-size:20px} .qtext{font-size:18px} }
   </style>
@@ -137,8 +131,8 @@
   <div id="app">
     <!-- Registration -->
     <section id="step-register" class="card">
-      <div class="title">Please complete the form to begin. You will have <strong>45 minutes</div>
-      <div class="subtitle"></strong>.</div>
+      <div class="title">English Level Placement Test</div>
+      <div class="subtitle">Please complete the form to begin. You will have <strong>45 minutes</strong>.</div>
       <form id="regForm" autocomplete="on">
         <div class="row">
           <div class="field"><label for="firstName">First name</label><input id="firstName" name="firstName" required placeholder="Name" /></div>
@@ -189,7 +183,7 @@
       </div>
     </section>
 
-    <!-- Results -->
+    <!-- Results (no per-question review shown) -->
     <section id="step-result" class="card hidden">
       <div class="title">Your Result</div>
       <div class="row" style="align-items:center">
@@ -201,13 +195,6 @@
       <div class="actions" style="margin:8px 0 2px">
         <button id="restartBtn" class="btn ghost">Restart</button>
       </div>
-
-      <div class="review">
-        <details>
-          <summary>Review your answers</summary>
-          <div id="reviewList" style="margin-top:10px"></div>
-        </details>
-      </div>
     </section>
   </div>
 
@@ -216,6 +203,7 @@
     const TEST_MINUTES = 45;
     const STORAGE_KEY = 'levelsQuiz.v1';
 
+    // CEFR mapping per your ranges
     function levelFromScore(score80){
       if(score80 <= 9) return 'A1';
       if(score80 <= 27) return 'A2';
@@ -297,10 +285,8 @@
         container.appendChild(div);
       });
 
-      // one handler per render to reflect selection
       container.onchange = updateOptionSelectionUI;
 
-      // restore selection
       if(prevValue){
         const input = [...container.querySelectorAll('input')].find(i=>i.value===prevValue);
         if(input){ input.checked = true; }
@@ -356,18 +342,19 @@
       tick();
     }
 
-    /* ------------ Finish ------------ */
+    /* ------------ Finish (no review UI) ------------ */
     function finish(timeUp){
       if(tickHandle) clearTimeout(tickHandle);
+
       const total = QUESTIONS.length;
       let correct = 0;
-      const review = [];
       for(const q of QUESTIONS){
         const picked = state.answers[q.id];
-        const ok = (picked||'').trim().toLowerCase() === (q.correct||'').trim().toLowerCase();
-        if(ok) correct++;
-        review.push({id:q.id, text:q.text, picked, correctAns:q.correct, ok});
+        if((picked||'').trim().toLowerCase() === (q.correct||'').trim().toLowerCase()){
+          correct++;
+        }
       }
+
       const elapsedSec = Math.floor((Date.now() - state.startedAt)/1000);
       const scaled80 = Math.round(correct * 80 / Math.max(1,total));
       const level = levelFromScore(scaled80);
@@ -377,19 +364,9 @@
       $('#scoreText').textContent = `${correct}`;
       $('#totalText').textContent = `${total}`;
       $('#levelText').textContent = level;
+
       const mm = Math.floor(elapsedSec/60), ss = elapsedSec%60;
       $('#timeUsedText').textContent = `Time used: ${fmt(mm)}:${fmt(ss)}  ·  Scaled score for level: ${scaled80}/80` + (state.giveUp? '  ·  (Gave up early)':'');
-
-      const list = document.getElementById('reviewList');
-      list.innerHTML = '';
-      review.forEach((r,idx)=>{
-        const div = document.createElement('div');
-        div.style.margin = '8px 0';
-        div.innerHTML = `<div><strong>Q${idx+1}. ${r.text}</strong></div>
-                         <div>Your answer: <span class="${r.ok?'':'mono'}">${r.picked ?? '(no answer)'}</span></div>
-                         <div>Correct: <strong>${r.correctAns}</strong> ${r.ok? '✅':'❌'}</div>`;
-        list.appendChild(div);
-      });
 
       localStorage.removeItem(STORAGE_KEY);
     }
