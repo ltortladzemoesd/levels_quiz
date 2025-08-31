@@ -1,207 +1,336 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Levels – Quiz Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#F2F2F2; --card:#fff; --text:#1f2a37; --muted:#6b7280; --accent:#2B445B; --ok:#23B899;
-    --hoverBg:#ADE2D7; --hoverText:#2B445B;
+    --bg:#F2F2F2; --card:#fff; --text:#1f2a37; --muted:#6b7280;
+    --accent:#2B445B; --hoverBg:#ADE2D7; --hoverText:#2B445B;
+    --radius:16px;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:"Red Hat Display",system-ui,Arial}
-  .wrap{max-width:1100px;margin:0 auto;padding:24px}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"Red Hat Display", system-ui, Arial}
+  .wrap{max-width:1200px;margin:0 auto;padding:24px}
   h1{margin:0 0 12px;font-weight:800}
-  .card{background:var(--card);border-radius:16px;padding:16px}
-  .row{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
+  .card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #eee}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
   label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
   input,select{padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;font:inherit;background:white}
-  .btn{background:#2B445B;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:800;cursor:pointer;transition:transform .12s,background .12s,color .12s}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:800;cursor:pointer;transition:transform .12s,background .12s,color .12s}
   .btn:hover{transform:translateY(-1px);background:var(--hoverBg);color:var(--hoverText)}
-  .toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
-  table{width:100%;border-collapse:collapse;margin-top:12px}
-  th,td{padding:10px;border-bottom:1px solid #f0f0f0;text-align:left;font-size:14px}
-  th{font-weight:800}
-  .badge{display:inline-block;background:#f3f4f6;border-radius:10px;padding:4px 8px;font-size:12px}
-  .stat{padding:10px 12px;border:1px solid #eee;border-radius:12px;background:#fff}
+  .hidden{display:none !important}
   .muted{color:var(--muted)}
-  .login{display:flex;gap:10px;align-items:flex-end}
+  .right{margin-left:auto}
+  .stats{display:grid;grid-template-columns:repeat(3,minmax(250px,1fr));gap:12px}
+  .stat{background:#fff;border:1px solid #eee;border-radius:var(--radius);padding:16px}
+  .stat h3{margin:0 0 6px;font-size:14px;color:var(--muted)}
+  .stat .big{font-size:28px;font-weight:800}
+  #latest{max-height:360px;overflow:auto;border:1px solid #eee;border-radius:12px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid #f5f5f5;text-align:left;font-size:14px}
+  th{font-weight:800;position:sticky;top:0;background:#fff}
+  .badge{display:inline-block;background:#f3f4f6;border-radius:10px;padding:4px 8px;font-size:12px}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Quiz Admin</h1>
+<div class="wrap">
+  <h1>Quiz Admin</h1>
 
-    <div id="loginCard" class="card">
-      <div class="login">
-        <div>
-          <label>Results API URL</label>
-          <input id="apiUrl" placeholder="https://script.google.com/macros/s/.../exec" style="min-width:420px">
-        </div>
-        <div>
-          <label>Admin token</label>
-          <input id="apiToken" placeholder="YOUR_SECRET_TOKEN">
-        </div>
-        <button class="btn" id="saveConn">Save & Load</button>
-        <span class="muted">These values are stored only in your browser (localStorage).</span>
+  <!-- Login -->
+  <div id="loginCard" class="card">
+    <form class="row" onsubmit="__adminLogin(event)">
+      <div>
+        <label>Email</label>
+        <input id="adminEmail" type="email" placeholder="admin@levelsacademy.ge" required>
       </div>
+      <div>
+        <label>Password</label>
+        <input id="adminPass" type="password" required>
+      </div>
+      <button class="btn" type="submit">Sign in</button>
+      <div id="who" class="muted"></div>
+      <button class="btn right hidden" id="logoutBtn" type="button" onclick="__adminLogout()">Sign out</button>
+    </form>
+    <div class="muted" style="margin-top:6px">
+      Reads are restricted to your admin email via Firestore rules. (No reCAPTCHA.)
     </div>
+  </div>
 
-    <div id="app" class="card" style="margin-top:12px;display:none">
-      <div class="toolbar">
-        <div>
-          <label>Search name/email</label>
-          <input id="q" placeholder="type to filter…" />
-        </div>
-        <div>
-          <label>Level</label>
-          <select id="level">
-            <option value="">All</option>
-            <option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option>
-          </select>
-        </div>
-        <div>
-          <label>From date</label>
-          <input id="from" type="date" />
-        </div>
-        <div>
-          <label>To date</label>
-          <input id="to" type="date" />
-        </div>
-        <button class="btn" id="refresh">Refresh</button>
-        <button class="btn" id="export">Export CSV</button>
+  <!-- Controls -->
+  <div id="controls" class="card hidden" style="margin-top:12px">
+    <div class="row">
+      <div>
+        <label>Quick range</label>
+        <select id="quick">
+          <option value="today">Today</option>
+          <option value="week">This week</option>
+          <option value="month" selected>This month</option>
+          <option value="custom">Custom…</option>
+        </select>
       </div>
-
-      <div class="row">
-        <div class="stat"><strong id="count">0</strong> attempts</div>
-        <div class="stat">Avg score: <strong id="avg">-</strong></div>
-        <div class="stat">Levels: <span id="dist" class="muted"></span></div>
+      <div>
+        <label>From</label>
+        <input id="from" type="date"/>
       </div>
+      <div>
+        <label>To</label>
+        <input id="to" type="date"/>
+      </div>
+      <button class="btn" id="apply">Apply</button>
+      <div class="right"></div>
+      <div>
+        <label>Search (name/email)</label>
+        <input id="search" placeholder="type to filter…"/>
+      </div>
+      <button class="btn" id="refresh">Refresh</button>
+    </div>
+  </div>
 
-      <table id="tbl">
+  <!-- Stats -->
+  <div id="dash" class="stats hidden" style="margin-top:12px">
+    <div class="stat">
+      <h3>Total submissions</h3>
+      <div class="big" id="totalCount">—</div>
+      <div class="muted" id="rangeCaption"></div>
+    </div>
+    <div class="stat">
+      <h3>Average score (excludes “quit &lt; 15”)</h3>
+      <div class="big" id="avgScore">—</div>
+      <div class="muted" id="avgNote"></div>
+    </div>
+    <div class="stat">
+      <h3>Submissions chart</h3>
+      <canvas id="chart" height="90"></canvas>
+    </div>
+  </div>
+
+  <!-- Latest 5 -->
+  <div id="listCard" class="card hidden" style="margin-top:12px">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h3 style="margin:0">Latest submissions</h3>
+      <button id="loadMore" class="btn">Load more</button>
+    </div>
+    <div id="latest" style="margin-top:8px">
+      <table>
         <thead>
           <tr>
             <th>Time</th><th>Name</th><th>Email</th><th>Phone</th>
             <th>Level</th><th>Score</th><th>Duration</th><th>Gave up</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="tbody"></tbody>
       </table>
-
-      <div class="muted">Tip: click “Export CSV” to save the filtered view.</div>
     </div>
   </div>
+</div>
 
-<script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<!-- Firebase (no App Check) -->
+<script type="module">
+  import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+  import { getFirestore, collection, query, where, orderBy, limit, getDocs, startAfter, Timestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+  // Your project config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDofnLqwSpjSJ9C9NEabCNSRBvTHraf2YA",
+    authDomain: "levels-quiz-c8fc3.firebaseapp.com",
+    projectId: "levels-quiz-c8fc3",
+    storageBucket: "levels-quiz-c8fc3.firebasestorage.app",
+    messagingSenderId: "687807069195",
+    appId: "1:687807069195:web:c7041de1c1117ee4671b0e"
+  };
+
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getFirestore(app);
+
+  // --- helpers ---
   const $ = s => document.querySelector(s);
-  const LS = {
-    url: 'levels.results.url',
-    tok: 'levels.results.token'
-  };
+  const fmt2 = n => String(n).padStart(2,'0');
+  const fmtDur = s => `${Math.floor((+s||0)/60)}:${fmt2((+s||0)%60)}`;
+  const toDateInput = d => `${d.getFullYear()}-${fmt2(d.getMonth()+1)}-${fmt2(d.getDate())}`;
 
-  $('#apiUrl').value = localStorage.getItem(LS.url) || '';
-  $('#apiToken').value = localStorage.getItem(LS.tok) || '';
+  // --- auth ---
+  async function doLogin(e){
+    e?.preventDefault?.();
+    const email = $('#adminEmail').value.trim();
+    const pass  = $('#adminPass').value;
+    await signInWithEmailAndPassword(auth, email, pass);
+  }
+  async function doLogout(){ await signOut(auth); }
+  window.__adminLogin = doLogin;
+  window.__adminLogout = doLogout;
 
-  $('#saveConn').onclick = () => {
-    localStorage.setItem(LS.url, $('#apiUrl').value.trim());
-    localStorage.setItem(LS.tok, $('#apiToken').value.trim());
-    load();
-  };
-  $('#refresh').onclick = () => load();
-  $('#q').oninput = () => render(window._rows||[]);
-  $('#level').onchange = () => render(window._rows||[]);
-  $('#from').onchange = () => render(window._rows||[]);
-  $('#to').onchange = () => render(window._rows||[]);
-  $('#export').onclick = exportCSV;
+  onAuthStateChanged(auth, async (user) => {
+    const authed = !!user;
+    $('#logoutBtn').classList.toggle('hidden', !authed);
+    $('#who').textContent = authed ? `Signed in as ${user.email}` : '';
+    ['controls','dash','listCard'].forEach(id => $('#'+id).classList.toggle('hidden', !authed));
+    if(authed){
+      initRanges();
+      await loadAll();
+      await loadLatest(true);
+    }else{
+      // clear table/chart
+      if(chart){ chart.destroy(); chart=null; }
+      $('#tbody').innerHTML='';
+      $('#totalCount').textContent='—';
+      $('#avgScore').textContent='—';
+      $('#avgNote').textContent='';
+      $('#rangeCaption').textContent='';
+    }
+  });
 
-  async function load(){
-    const url = localStorage.getItem(LS.url);
-    const token = localStorage.getItem(LS.tok);
-    if(!url || !token){ alert('Set API URL and token first.'); return; }
-    $('#app').style.display = 'block';
-    try{
-      const res = await fetch(url + '?token=' + encodeURIComponent(token));
-      const json = await res.json();
-      if(!json.ok){ throw new Error(json.error || 'API error'); }
-      // Normalize timestamps for display
-      window._rows = (json.rows||[]).map(r=>{
-        return Object.assign({}, r, {
-          timestamp: r.timestamp ? new Date(r.timestamp).toISOString() : ''
-        });
-      });
-      render(window._rows);
-    }catch(e){
-      alert('Failed to load: ' + e.message);
+  // --- ranges / filters ---
+  function initRanges(){
+    const now = new Date();
+    $('#from').value = toDateInput(new Date(now.getFullYear(), now.getMonth(), 1));
+    $('#to').value = toDateInput(now);
+    $('#quick').onchange = applyQuick;
+    $('#apply').onclick = loadAll;
+    $('#refresh').onclick = loadAll;
+    $('#search').oninput = filterTable;
+  }
+  function applyQuick(){
+    const now = new Date();
+    const val = $('#quick').value;
+    let from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let to = now;
+    if(val==='today'){
+      // midnight today to now
+    }else if(val==='week'){
+      // Monday start (approx)
+      const day = from.getDay() || 7;
+      from.setDate(from.getDate() - (day-1));
+    }else if(val==='month'){
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+    }else{ return; } // custom
+    $('#from').value = toDateInput(from);
+    $('#to').value = toDateInput(to);
+  }
+
+  // --- data holders ---
+  let chart = null;
+  let latestCursor = null;
+  let latestRows = []; // full in-range rows (for search)
+
+  // --- load range (stats + chart + latest table) ---
+  async function loadAll(){
+    const fromD = new Date($('#from').value);
+    const toD = new Date($('#to').value);
+    toD.setHours(23,59,59,999);
+    $('#rangeCaption').textContent = `${fromD.toDateString()} – ${toD.toDateString()}`;
+
+    // Query by finishedAt (we write this in quiz.html)
+    const qRef = query(
+      collection(db,'attempts'),
+      where('finishedAt','>=', Timestamp.fromDate(fromD)),
+      where('finishedAt','<=', Timestamp.fromDate(toD)),
+      orderBy('finishedAt','asc')
+    );
+
+    const snap = await getDocs(qRef);
+    const rows = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+    // Totals
+    $('#totalCount').textContent = rows.length.toString();
+
+    // Average score excluding quit < 15
+    const elig = rows.filter(r => !(r.giveUp === true && Number(r.answeredCount||0) < 15));
+    const avg = elig.length ? (elig.reduce((a,b)=>a + Number(b.rawScore||0), 0) / elig.length).toFixed(1) : '—';
+    $('#avgScore').textContent = avg;
+    $('#avgNote').textContent = `Eligible: ${elig.length} of ${rows.length}`;
+
+    // Chart by day
+    const byDay = {};
+    rows.forEach(r=>{
+      const when = r.finishedAt?.toDate?.() || r.timestamp?.toDate?.();
+      if(!when) return;
+      const key = when.toISOString().slice(0,10);
+      byDay[key] = (byDay[key]||0)+1;
+    });
+    const labels = Object.keys(byDay).sort();
+    const data = labels.map(k => byDay[k]);
+    drawChart(labels, data);
+
+    // Table data (keep latest first)
+    latestRows = rows.slice().sort((a,b) =>
+      (b.finishedAt?.toMillis?.() || 0) - (a.finishedAt?.toMillis?.() || 0)
+    );
+    renderTable(latestRows.slice(0,5));
+    // also reset paging cursor for real-time “load more”
+    latestCursor = null;
+  }
+
+  // --- latest 5 paging (outside filter range too) ---
+  async function loadLatest(reset=false){
+    const base = collection(db,'attempts');
+    const q0 = latestCursor
+      ? query(base, orderBy('finishedAt','desc'), startAfter(latestCursor), limit(10))
+      : query(base, orderBy('finishedAt','desc'), limit(10));
+    const snap = await getDocs(q0);
+    if(reset){ $('#tbody').innerHTML=''; latestCursor=null; }
+    if(snap.docs.length){
+      latestCursor = snap.docs[snap.docs.length-1];
+      const rows = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      appendRows(rows);
     }
   }
+  $('#loadMore').onclick = () => loadLatest(false);
 
-  function render(rows){
-    const q = $('#q').value.trim().toLowerCase();
-    const lvl = $('#level').value;
-    const from = $('#from').value ? new Date($('#from').value) : null;
-    const to = $('#to').value ? new Date($('#to').value) : null;
-
-    const filtered = rows.filter(r=>{
-      const when = r.timestamp ? new Date(r.timestamp) : null;
-      const matchQ = !q || ( (r.firstName||'').toLowerCase().includes(q) || (r.lastName||'').toLowerCase().includes(q) || (r.email||'').toLowerCase().includes(q) );
-      const matchL = !lvl || (r.level===lvl);
-      const matchFrom = !from || (when && when >= from);
-      const matchTo = !to || (when && when <= new Date(to.getTime()+24*3600*1000-1));
-      return matchQ && matchL && matchFrom && matchTo;
+  function drawChart(labels, data){
+    const ctx = document.getElementById('chart');
+    if(chart){ chart.destroy(); }
+    chart = new Chart(ctx, {
+      type:'line',
+      data:{ labels, datasets:[{ data, label:'Submissions', tension:.25, fill:false }] },
+      options:{
+        responsive:true,
+        plugins:{ legend:{ display:false } },
+        scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+      }
     });
-
-    // stats
-    $('#count').textContent = filtered.length;
-    const scores = filtered.map(r=>Number(r.rawScore||0)).filter(n=>!isNaN(n));
-    $('#avg').textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '-';
-    const levels = ['A1','A2','B1','B2','C1'];
-    $('#dist').textContent = levels.map(L=>{
-      const c = filtered.filter(r=>r.level===L).length;
-      return `${L}:${c}`;
-    }).join('  ');
-
-    // table
-    const tbody = $('#tbl tbody'); tbody.innerHTML='';
-    filtered
-      .sort((a,b)=> (new Date(b.timestamp)) - (new Date(a.timestamp)))
-      .forEach(r=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r.timestamp?.replace('T',' ').replace('Z','') || ''}</td>
-          <td>${(r.firstName||'') + ' ' + (r.lastName||'')}</td>
-          <td>${r.email||''}</td>
-          <td>${r.phone||''}</td>
-          <td><span class="badge">${r.level||''}</span></td>
-          <td>${r.rawScore||0}/${r.rawTotal||0} (=${r.scaledTo80||0}/80)</td>
-          <td>${fmtMin(r.elapsedSec)}</td>
-          <td>${String(r.giveUp).toUpperCase()==='TRUE' || r.giveUp===true ? 'Yes' : 'No'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
   }
 
-  function exportCSV(){
-    const rows = [...document.querySelectorAll('#tbl tbody tr')].map(tr => [...tr.children].map(td => td.textContent));
-    const header = ['Time','Name','Email','Phone','Level','Score','Duration','Gave up'];
-    const csv = [header, ...rows].map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], {type:'text/csv'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'quiz_results.csv';
-    a.click();
+  function renderTable(rows){
+    const tbody = $('#tbody'); tbody.innerHTML='';
+    appendRows(rows);
+  }
+  function appendRows(rows){
+    const tbody = $('#tbody');
+    rows.forEach(r=>{
+      const when = r.finishedAt?.toDate?.() || r.timestamp?.toDate?.();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${when ? when.toISOString().replace('T',' ').replace('Z','') : ''}</td>
+        <td>${(r.firstName||'') + ' ' + (r.lastName||'')}</td>
+        <td>${r.email||''}</td>
+        <td>${r.phone||''}</td>
+        <td><span class="badge">${r.level||''}</span></td>
+        <td>${Number(r.rawScore||0)}/${Number(r.rawTotal||0)} (=${Number(r.scaledTo80||0)}/80)</td>
+        <td>${fmtDur(Number(r.elapsedSec||0))}</td>
+        <td>${r.giveUp ? 'Yes' : 'No'}</td>
+      `;
+      tbody.appendChild(tr);
+    });
   }
 
-  function fmtMin(sec){
-    sec = Number(sec||0);
-    const m = Math.floor(sec/60), s = sec%60;
-    return `${m}:${String(s).padStart(2,'0')}`;
-  }
-
-  // Auto-load if saved
-  if(localStorage.getItem(LS.url) && localStorage.getItem(LS.tok)){
-    load();
+  // Local search (on the in-range set shown in the table)
+  function filterTable(){
+    const q = ($('#search').value||'').toLowerCase().trim();
+    const base = latestRows;
+    const filtered = !q ? base : base.filter(r =>
+      (r.firstName||'').toLowerCase().includes(q) ||
+      (r.lastName||'').toLowerCase().includes(q) ||
+      (r.email||'').toLowerCase().includes(q)
+    );
+    renderTable(filtered.slice(0, Math.max(5, filtered.length)));
   }
 </script>
 </body>
