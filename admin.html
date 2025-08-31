@@ -33,6 +33,14 @@
   th,td{padding:10px;border-bottom:1px solid #f5f5f5;text-align:left;font-size:14px}
   th{font-weight:800;position:sticky;top:0;background:#fff}
   .badge{display:inline-block;background:#f3f4f6;border-radius:10px;padding:4px 8px;font-size:12px}
+
+  /* Excel export card + button (Excel green) */
+  .excel-box{ background:#217346; color:#fff; }
+  .excel-box label{ color:#e6f5ec; }
+  .excel-box .muted{ color:#e6f5ec; }
+  .btn-excel{ background:#1b5e34; color:#fff; }
+  .btn-excel:hover{ transform:translateY(-1px); filter:brightness(1.05); }
+  .excel-box input{ background:#fff; color:#111; border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; }
 </style>
 </head>
 <body>
@@ -79,13 +87,13 @@
         <label>To</label>
         <input id="to" type="date"/>
       </div>
-      <button class="btn" id="apply">Apply</button>
+      <button class="btn" id="apply" type="button">Apply</button>
       <div class="right"></div>
       <div>
         <label>Search (name/email)</label>
         <input id="search" placeholder="type to filter…"/>
       </div>
-      <button class="btn" id="refresh">Refresh</button>
+      <button class="btn" id="refresh" type="button">Refresh</button>
     </div>
   </div>
 
@@ -107,11 +115,30 @@
     </div>
   </div>
 
+  <!-- Excel export (Excel green) -->
+  <div id="exportCard" class="card excel-box hidden" style="margin-top:12px">
+    <div class="row" style="align-items:flex-end">
+      <h3 style="margin:0 0 8px 0; flex:1 0 100%">Download Excel</h3>
+
+      <div>
+        <label>From</label>
+        <input id="xFrom" type="date" />
+      </div>
+      <div>
+        <label>To</label>
+        <input id="xTo" type="date" />
+      </div>
+
+      <button id="xDownloadBtn" class="btn btn-excel" type="button">Download .xlsx</button>
+    </div>
+    <div class="muted">Exports all submissions with <strong>finishedAt</strong> between these dates.</div>
+  </div>
+
   <!-- Latest 5 -->
   <div id="listCard" class="card hidden" style="margin-top:12px">
     <div class="row" style="justify-content:space-between;align-items:center">
       <h3 style="margin:0">Latest submissions</h3>
-      <button id="loadMore" class="btn">Load more</button>
+      <button id="loadMore" class="btn" type="button">Load more</button>
     </div>
     <div id="latest" style="margin-top:8px">
       <table>
@@ -129,6 +156,8 @@
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <!-- Firebase (no App Check) -->
 <script type="module">
@@ -136,7 +165,7 @@
   import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
   import { getFirestore, collection, query, where, orderBy, limit, getDocs, startAfter, Timestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
-  // Your project config
+  // Your Firebase project config
   const firebaseConfig = {
     apiKey: "AIzaSyDofnLqwSpjSJ9C9NEabCNSRBvTHraf2YA",
     authDomain: "levels-quiz-c8fc3.firebaseapp.com",
@@ -171,13 +200,20 @@
     const authed = !!user;
     $('#logoutBtn').classList.toggle('hidden', !authed);
     $('#who').textContent = authed ? `Signed in as ${user.email}` : '';
-    ['controls','dash','listCard'].forEach(id => $('#'+id).classList.toggle('hidden', !authed));
+    ['controls','dash','listCard','exportCard'].forEach(id => $('#'+id).classList.toggle('hidden', !authed));
     if(authed){
       initRanges();
+      initExportDates();
       await loadAll();
       await loadLatest(true);
+      $('#xDownloadBtn').onclick = downloadExcelRange;
+      $('#loadMore').onclick = () => loadLatest(false);
+      $('#apply').onclick = loadAll;
+      $('#refresh').onclick = loadAll;
+      $('#search').oninput = filterTable;
+      $('#quick').onchange = applyQuick;
     }else{
-      // clear table/chart
+      // clear UI
       if(chart){ chart.destroy(); chart=null; }
       $('#tbody').innerHTML='';
       $('#totalCount').textContent='—';
@@ -187,15 +223,11 @@
     }
   });
 
-  // --- ranges / filters ---
+  // --- ranges / filters (dashboard) ---
   function initRanges(){
     const now = new Date();
     $('#from').value = toDateInput(new Date(now.getFullYear(), now.getMonth(), 1));
     $('#to').value = toDateInput(now);
-    $('#quick').onchange = applyQuick;
-    $('#apply').onclick = loadAll;
-    $('#refresh').onclick = loadAll;
-    $('#search').oninput = filterTable;
   }
   function applyQuick(){
     const now = new Date();
@@ -215,19 +247,26 @@
     $('#to').value = toDateInput(to);
   }
 
+  // --- export dates (independent of dashboard controls) ---
+  function initExportDates(){
+    const now = new Date();
+    $('#xFrom').value = toDateInput(new Date(now.getFullYear(), now.getMonth(), 1));
+    $('#xTo').value = toDateInput(now);
+  }
+
   // --- data holders ---
   let chart = null;
   let latestCursor = null;
-  let latestRows = []; // full in-range rows (for search)
+  let latestRows = []; // in-range, for search/table
 
-  // --- load range (stats + chart + latest table) ---
+  // --- load range (stats + chart + table based on dashboard From/To) ---
   async function loadAll(){
     const fromD = new Date($('#from').value);
     const toD = new Date($('#to').value);
     toD.setHours(23,59,59,999);
     $('#rangeCaption').textContent = `${fromD.toDateString()} – ${toD.toDateString()}`;
 
-    // Query by finishedAt (we write this in quiz.html)
+    // Query by finishedAt (we set this in quiz.html as serverTimestamp)
     const qRef = query(
       collection(db,'attempts'),
       where('finishedAt','>=', Timestamp.fromDate(fromD)),
@@ -259,16 +298,15 @@
     const data = labels.map(k => byDay[k]);
     drawChart(labels, data);
 
-    // Table data (keep latest first)
+    // Table data (latest first)
     latestRows = rows.slice().sort((a,b) =>
       (b.finishedAt?.toMillis?.() || 0) - (a.finishedAt?.toMillis?.() || 0)
     );
     renderTable(latestRows.slice(0,5));
-    // also reset paging cursor for real-time “load more”
-    latestCursor = null;
+    latestCursor = null; // reset paging cursor
   }
 
-  // --- latest 5 paging (outside filter range too) ---
+  // --- latest paging (global latest, independent of dashboard range) ---
   async function loadLatest(reset=false){
     const base = collection(db,'attempts');
     const q0 = latestCursor
@@ -282,7 +320,6 @@
       appendRows(rows);
     }
   }
-  $('#loadMore').onclick = () => loadLatest(false);
 
   function drawChart(labels, data){
     const ctx = document.getElementById('chart');
@@ -321,7 +358,7 @@
     });
   }
 
-  // Local search (on the in-range set shown in the table)
+  // Local search on in-range table
   function filterTable(){
     const q = ($('#search').value||'').toLowerCase().trim();
     const base = latestRows;
@@ -332,6 +369,71 @@
     );
     renderTable(filtered.slice(0, Math.max(5, filtered.length)));
   }
+
+  // --- Excel export (independent From/To in the green card) ---
+  async function downloadExcelRange(){
+    try{
+      const fromVal = $('#xFrom').value;
+      const toVal   = $('#xTo').value;
+      if(!fromVal || !toVal){ alert('Please select both From and To dates.'); return; }
+
+      const fromD = new Date(fromVal);
+      const toD   = new Date(toVal);
+      toD.setHours(23,59,59,999); // include the whole 'To' day
+
+      // Query Firestore by finishedAt within chosen export window
+      const qRef = query(
+        collection(db, 'attempts'),
+        where('finishedAt','>=', Timestamp.fromDate(fromD)),
+        where('finishedAt','<=', Timestamp.fromDate(toD)),
+        orderBy('finishedAt','asc')
+      );
+      const snap = await getDocs(qRef);
+      const docs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+      if(!docs.length){ alert('No submissions in that date range.'); return; }
+
+      // Flatten for Excel
+      const rows = docs.map(r => {
+        const finished = r.finishedAt?.toDate?.() || r.timestamp?.toDate?.() || null;
+        const durSec = Number(r.elapsedSec||0);
+        return {
+          FinishedAt:  finished || null,
+          FirstName:   r.firstName || '',
+          LastName:    r.lastName  || '',
+          Email:       r.email     || '',
+          Phone:       r.phone     || '',
+          Level:       r.level     || '',
+          Score:       Number(r.rawScore||0),
+          Total:       Number(r.rawTotal||0),
+          ScaledTo80:  Number(r.scaledTo80||0),
+          DurationSec: durSec,
+          DurationMMSS:`${Math.floor(durSec/60)}:${fmt2(durSec%60)}`,
+          GaveUp:      !!r.giveUp,
+          AnsweredCount: Number(r.answeredCount||0),
+          QuitEarlyBefore15: !!r.quitEarlyBefore15,
+          Plan:        r.plan || '',
+          DOB:         r.dob  || '',
+          AttemptId:   r.attemptId || '',
+          QuizVersion: r.quizVersion || '',
+          UserAgent:   r.userAgent || ''
+        };
+      });
+
+      // Build workbook
+      const ws = XLSX.utils.json_to_sheet(rows, { cellDates:true });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Results');
+
+      const filename = `quiz_results_${fromVal}_to_${toVal}.xlsx`;
+      XLSX.writeFile(wb, filename, { bookType:'xlsx', cellDates:true });
+
+    }catch(err){
+      console.error(err);
+      alert('Export failed. Check console for details.');
+    }
+  }
 </script>
 </body>
 </html>
+
