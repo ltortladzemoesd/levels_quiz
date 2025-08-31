@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>English Level Placement Test</title>
   <meta name="description" content="One question per card, 45-minute timer." />
+
   <!-- Red Hat Display -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -32,11 +33,13 @@
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
     }
+
+    /* wrapper: full width, 20px top/left/right padding, no shadow anywhere */
     #app{
       width:100%;
-      max-width:none;              /* full width on desktop */
+      max-width:none;
       margin:0 auto;
-      padding:20px 20px;           /* top 20, left/right 20 */
+      padding:20px 20px;
       display:flex;
       flex-direction:column;
       gap:24px;
@@ -45,7 +48,6 @@
       background:var(--card);
       border-radius:var(--radius);
       padding:24px;
-      /* no shadows anywhere */
     }
     .hidden{display:none !important}
     .row{display:flex; flex-wrap:wrap; gap:16px}
@@ -61,11 +63,11 @@
     /* Buttons */
     .btn{
       border:0;
-      background:#23B899;          /* default (Start/Finish if not overridden) */
+      background:#23B899;          /* default (used by Start & Finish if not overridden) */
       color:white;
       padding:12px 18px;
       border-radius:999px;
-      font-weight:800;             /* Extra Bold */
+      font-weight:800;             /* Extra Bold for buttons */
       font-family:'Red Hat Display', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
       cursor:pointer;
       transition:transform .12s ease, filter .12s ease, opacity .12s ease, background-color .12s ease, color .12s ease, border-color .12s ease;
@@ -78,8 +80,10 @@
     .navBtn{ width: var(--navBtnWidth); }
     #nextBtn{ background:#2B445B; color:#fff }
     #nextBtn:hover{ background:var(--hoverBg); color:var(--hoverText) }
+
     #prevBtn{ /* ghost by default */ }
     #prevBtn:hover{ background:var(--hoverBg); color:var(--hoverText); border-color:var(--hoverBg) }
+
     #giveUpBtn{ background:#F66E6E; color:#fff; border:none }
     #giveUpBtn:hover{ opacity:.7; color:var(--hoverText) }
 
@@ -101,9 +105,12 @@
       background:#f3f4f6;
       display:inline-block;
       text-align:center;
-      margin-bottom:16px;          /* gap before question */
+      margin-bottom:16px;          /* extra gap before question */
     }
-    .qtext{font-size:20px; font-weight:700; line-height:1.34; margin-bottom:14px}
+    .qtext{
+      font-size:20px; font-weight:700; line-height:1.34; margin-bottom:14px;
+      letter-spacing:0; word-spacing:0;   /* ensures no odd spacing */
+    }
 
     /* Options */
     .opts{display:flex; flex-direction:column; gap:10px; margin:14px 0 4px}
@@ -118,13 +125,16 @@
 
     .foot{display:flex; justify-content:space-between; align-items:center; margin-top:16px}
 
+    .title{font-weight:800; font-size:22px; margin-bottom:6px}
+    .subtitle{color:var(--muted);}
+
     .resultScore{font-size:42px; font-weight:800}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
     @media (max-width:600px){ #app{padding:20px 14px} .title{font-size:20px} .qtext{font-size:18px} }
   </style>
 
-  <!-- Load questions first -->
+  <!-- Load questions first (must set window.QUESTIONS) -->
   <script src="questions.js"></script>
 </head>
 <body>
@@ -183,7 +193,7 @@
       </div>
     </section>
 
-    <!-- Results (no per-question review shown) -->
+    <!-- Results (no per-question correctness shown) -->
     <section id="step-result" class="card hidden">
       <div class="title">Your Result</div>
       <div class="row" style="align-items:center">
@@ -270,7 +280,7 @@
       const total = QUESTIONS.length;
       const q = QUESTIONS[i];
       $('#qTag').textContent = `Q${i+1}`;
-      $('#qText').textContent = q.text;
+      $('#qText').textContent = q.text;  // textContent prevents weird spacing
       $('#progressText').textContent = `Question ${i+1} of ${total}`;
       $('#progressBar').style.width = ((i)/Math.max(1,total) * 100)+'%';
 
@@ -359,6 +369,37 @@
       const scaled80 = Math.round(correct * 80 / Math.max(1,total));
       const level = levelFromScore(scaled80);
 
+      // --- Build payload for Firestore (admin dashboard) ---
+      const answeredCount = Object.keys(state.answers||{}).length;
+      const payload = {
+        attemptId: (crypto?.randomUUID?.() || String(Date.now())),
+        firstName: state.user?.firstName || "",
+        lastName:  state.user?.lastName  || "",
+        dob:       state.user?.dob       || "",
+        phone:     state.user?.phone     || "",
+        email:     state.user?.email     || "",
+        plan:      state.user?.plan      || "",
+        giveUp:    !!state.giveUp,
+
+        elapsedSec,
+        rawScore: correct,
+        rawTotal: total,
+        scaledTo80: scaled80,
+        level,
+
+        answeredCount,
+        quitEarlyBefore15: !!state.giveUp && answeredCount < 15,
+        quizVersion: "v1",
+
+        startedAt: state.startedAt,          // ms since epoch; module converts to Date
+        userAgent: navigator.userAgent
+      };
+
+      if (window.submitAttemptToFirestore) {
+        window.submitAttemptToFirestore(payload);
+      }
+
+      // --- Results UI ---
       $('#step-quiz').classList.add('hidden');
       $('#step-result').classList.remove('hidden');
       $('#scoreText').textContent = `${correct}`;
@@ -379,5 +420,39 @@
     // Resume if user refreshes mid-test
     load();
   </script>
+
+  <!-- Firebase (no App Check) -->
+  <script type="module">
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+    // Your Firebase project config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDofnLqwSpjSJ9C9NEabCNSRBvTHraf2YA",
+      authDomain: "levels-quiz-c8fc3.firebaseapp.com",
+      projectId: "levels-quiz-c8fc3",
+      storageBucket: "levels-quiz-c8fc3.firebasestorage.app",
+      messagingSenderId: "687807069195",
+      appId: "1:687807069195:web:c7041de1c1117ee4671b0e"
+    };
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+
+    // Called from finish() to save one attempt
+    window.submitAttemptToFirestore = async (payload) => {
+      try {
+        await addDoc(collection(db, "attempts"), {
+          ...payload,
+          timestamp: serverTimestamp(),
+          finishedAt: serverTimestamp(),
+          startedAt: payload.startedAt ? new Date(payload.startedAt) : null,
+        });
+      } catch (e) {
+        console.warn("Firestore write failed:", e);
+      }
+    };
+  </script>
 </body>
 </html>
+
