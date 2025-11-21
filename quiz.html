@@ -227,7 +227,8 @@
 
     let QUESTIONS = window.QUESTIONS || [];
 
-    const state = { user:null, index:0, answers:{}, startedAt:null, giveUp:false };
+    // Added earlyA0 flag
+    const state = { user:null, index:0, answers:{}, startedAt:null, giveUp:false, earlyA0:false };
 
     function save(){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -260,6 +261,7 @@
       state.answers = {};
       state.startedAt = Date.now();
       state.giveUp = false;
+      state.earlyA0 = false; // reset
       save();
       $('#step-register').classList.add('hidden');
       $('#step-quiz').classList.remove('hidden');
@@ -314,16 +316,48 @@
       if(chosen){ state.answers[q.id] = chosen.value; save(); }
     }
 
+    // NEW: early stop check for first 40 questions -> A0
+    function checkEarlyStopA0(){
+      // Only applies if we have at least 40 questions
+      if(QUESTIONS.length < 40) return false;
+
+      const first40 = QUESTIONS.slice(0, 40);
+      let answered = 0;
+      let correctFirst40 = 0;
+
+      for(const q of first40){
+        const valRaw = state.answers[q.id];
+        if(valRaw != null){
+          answered++;
+          const picked = (valRaw || '').trim().toLowerCase();
+          const corr = (q.correct || '').trim().toLowerCase();
+          if(picked && picked === corr) correctFirst40++;
+        }
+      }
+
+      // Trigger only when ALL first 40 are answered and <=5 are correct
+      if(answered === first40.length && correctFirst40 <= 5){
+        state.earlyA0 = true;
+        save();
+        finish(false);  // stop quiz and show result
+        return true;
+      }
+      return false;
+    }
+
     document.getElementById('nextBtn').addEventListener('click', ()=>{
       captureAnswer();
+      if(checkEarlyStopA0()) return; // stop here if A0 condition met
       if(state.index < QUESTIONS.length-1){ state.index++; save(); renderQuestion(); }
     });
     document.getElementById('prevBtn').addEventListener('click', ()=>{
       captureAnswer();
+      // No early-stop check on going back
       if(state.index > 0){ state.index--; save(); renderQuestion(); }
     });
     document.getElementById('submitBtn').addEventListener('click', ()=>{
       captureAnswer();
+      if(checkEarlyStopA0()) return; // stop here if A0 condition met
       finish(false);
     });
     document.getElementById('giveUpBtn').addEventListener('click', ()=>{
@@ -365,9 +399,14 @@
         }
       }
 
-      const elapsedSec = Math.floor((Date.now() - state.startedAt)/1000);
+      const elapsedSec = Math.floor((Date.now() - (state.startedAt || Date.now()))/1000);
       const scaled80 = Math.round(correct * 80 / Math.max(1,total));
-      const level = levelFromScore(scaled80);
+      let level = levelFromScore(scaled80);
+
+      // Override level to A0 if early-stop rule was triggered
+      if(state.earlyA0){
+        level = 'A0';
+      }
 
       // --- Build payload for Firestore (admin dashboard) ---
       const answeredCount = Object.keys(state.answers||{}).length;
@@ -391,6 +430,9 @@
         quitEarlyBefore15: !!state.giveUp && answeredCount < 15,
         quizVersion: "v1",
 
+        // NEW: flag to know why A0 happened
+        earlyStopA0: !!state.earlyA0,
+
         startedAt: state.startedAt,          // ms since epoch; module converts to Date
         userAgent: navigator.userAgent
       };
@@ -408,7 +450,6 @@
 
       const mm = Math.floor(elapsedSec/60), ss = elapsedSec%60;
       $('#timeUsedText').textContent = `Time used: ${fmt(mm)}:${fmt(ss)}  ·  Scaled score for level: ${scaled80}/80` + (state.giveUp? '  ·  (Gave up early)':'');
-
       localStorage.removeItem(STORAGE_KEY);
     }
 
