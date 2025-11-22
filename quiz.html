@@ -336,7 +336,7 @@
       }
 
       // Trigger only when ALL first 40 are answered and <=5 are correct
-      if(answered === first40.length && correctFirst40 <= 5){
+      if(answered === first40.length && correctFirst40 < 35){
         state.earlyA0 = true;
         save();
         finish(false);  // stop quiz and show result
