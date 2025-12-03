@@ -227,8 +227,8 @@
 
     let QUESTIONS = window.QUESTIONS || [];
 
-    // Added earlyA0 flag
-    const state = { user:null, index:0, answers:{}, startedAt:null, giveUp:false, earlyA0:false };
+    // No A0 flags anymore
+    const state = { user:null, index:0, answers:{}, startedAt:null, giveUp:false };
 
     function save(){
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -261,7 +261,6 @@
       state.answers = {};
       state.startedAt = Date.now();
       state.giveUp = false;
-      state.earlyA0 = false; // reset
       save();
       $('#step-register').classList.add('hidden');
       $('#step-quiz').classList.remove('hidden');
@@ -316,8 +315,8 @@
       if(chosen){ state.answers[q.id] = chosen.value; save(); }
     }
 
-    // NEW: early stop check for first 40 questions -> A0
-    function checkEarlyStopA0(){
+    // Early stop check for first 40 questions -> just stop, normal grading
+    function checkEarlyStopFirst40(){
       // Only applies if we have at least 40 questions
       if(QUESTIONS.length < 40) return false;
 
@@ -335,11 +334,9 @@
         }
       }
 
-      // Trigger only when ALL first 40 are answered and <=5 are correct
+      // Trigger only when ALL first 40 are answered and <35 are correct
       if(answered === first40.length && correctFirst40 < 35){
-        state.earlyA0 = true;
-        save();
-        finish(false);  // stop quiz and show result
+        finish(false);  // stop quiz and show normal result
         return true;
       }
       return false;
@@ -347,7 +344,7 @@
 
     document.getElementById('nextBtn').addEventListener('click', ()=>{
       captureAnswer();
-      if(checkEarlyStopA0()) return; // stop here if A0 condition met
+      if(checkEarlyStopFirst40()) return; // stop here if condition met
       if(state.index < QUESTIONS.length-1){ state.index++; save(); renderQuestion(); }
     });
     document.getElementById('prevBtn').addEventListener('click', ()=>{
@@ -357,7 +354,7 @@
     });
     document.getElementById('submitBtn').addEventListener('click', ()=>{
       captureAnswer();
-      if(checkEarlyStopA0()) return; // stop here if A0 condition met
+      if(checkEarlyStopFirst40()) return; // stop here if condition met
       finish(false);
     });
     document.getElementById('giveUpBtn').addEventListener('click', ()=>{
@@ -401,12 +398,7 @@
 
       const elapsedSec = Math.floor((Date.now() - (state.startedAt || Date.now()))/1000);
       const scaled80 = Math.round(correct * 80 / Math.max(1,total));
-      let level = levelFromScore(scaled80);
-
-      // Override level to A0 if early-stop rule was triggered
-      if(state.earlyA0){
-        level = 'A0';
-      }
+      const level = levelFromScore(scaled80);
 
       // --- Build payload for Firestore (admin dashboard) ---
       const answeredCount = Object.keys(state.answers||{}).length;
@@ -429,9 +421,6 @@
         answeredCount,
         quitEarlyBefore15: !!state.giveUp && answeredCount < 15,
         quizVersion: "v1",
-
-        // NEW: flag to know why A0 happened
-        earlyStopA0: !!state.earlyA0,
 
         startedAt: state.startedAt,          // ms since epoch; module converts to Date
         userAgent: navigator.userAgent
@@ -496,4 +485,5 @@
   </script>
 </body>
 </html>
+
 
